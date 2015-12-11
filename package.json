@@ -1,0 +1,47 @@
+{
+  "name": "chameleon-mock",
+  "description": "The mock backend build system",
+  "version": "0.0.2",
+  "homepage": "https://github.com/ibone/chameleon",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ibone/chameleon.git"
+  },
+  "author": {
+    "name": "ibone",
+    "email": "iboneyu@gmail.com",
+    "url": "http://ibone.me/"
+  },
+  "tags": [
+    "mock",
+    "data",
+    "api",
+    "manangment",
+    "tool"
+  ],
+  "files": [
+    "index.js",
+    "bin"
+  ],
+  "bin": {
+    "chameleon": "./bin/chameleon.js"
+  },
+  "dependencies": {
+    "express": "^4.13.0",
+    "gulp-util": "^3.0.0",
+    "interpret": "^0.6.2",
+    "liftoff": "^2.1.0",
+    "minimist": "^1.1.0",
+    "v8flags": "^2.0.2",
+    "chalk": "^1.0.0",
+    "tildify": "^1.0.0"
+  },
+  "devDependencies": {
+
+  },
+  "engines": {
+    "node": ">= 0.9"
+  },
+  "license": "MIT",
+  "readme": "ERROR: No README data found!"
+}

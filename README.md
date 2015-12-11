@@ -1,2 +1,1 @@
-# chameleon
-local mock server
+Local mock service
