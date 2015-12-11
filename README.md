@@ -1,2 +1,2 @@
 # chameleon
-local mock server, simply, stranger
+local mock server
