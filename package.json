@@ -34,7 +34,9 @@
     "minimist": "^1.1.0",
     "v8flags": "^2.0.2",
     "chalk": "^1.0.0",
-    "tildify": "^1.0.0"
+    "semver": "^4.1.0",
+    "tildify": "^1.0.0",
+    "morgan":"^1.6.1"
   },
   "devDependencies": {
 

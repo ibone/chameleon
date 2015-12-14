@@ -3,9 +3,9 @@
 'use strict';
 var chalk = require('chalk');
 var gutil = require('gulp-util');
-var interpret = require('interpret');
 var Liftoff = require('liftoff');
 var v8flags = require('v8flags');
+var semver = require('semver');
 var tildify = require('tildify');
 //var completion = require('../lib/completion');
 var argv = require('minimist')(process.argv.slice(2));
@@ -17,7 +17,8 @@ process.env.INIT_CWD = process.cwd();
 var cli = new Liftoff({
   name: 'chameleon',
   //completions: completion,
-  extensions: interpret.jsVariants,
+  moduleName: 'chameleon-mock',
+  extensions: {'.json':null},
   v8flags: v8flags,
 });
 
@@ -52,14 +53,18 @@ cli.launch({
   completion: argv.completion,
 }, handleArguments);
 
-var tasks = argv._;
+/*
+var port = argv.p;
+if(typeof port != 'number'){
+    gutil.log(chalk.red('chameleon need a server port'));
+    gutil.log('you can input:    $ chameleon -p 3000');
+    process.exit(1);
+}
+*/
+
+var cliPackage = require('../package');
 
 function handleArguments(env) {
-  if (versionFlag && tasks.length === 0) {
-    gutil.log('CLI version', cliPackage.version);
-    process.exit(0);
-  }
-
   if (!env.modulePath) {
     gutil.log(
       chalk.red('Local chameleon not found in'),
@@ -91,20 +96,13 @@ function handleArguments(env) {
     );
   }
 
-  // This is what actually loads up the gulpfile
-  require(env.configPath);
-  gutil.log('Using gulpfile', chalk.magenta(tildify(env.configPath)));
+  var config = require(env.configPath);
+  config.cwd = env.cwd;
+  gutil.log('Using chameleonfile', chalk.magenta(tildify(env.configPath)));
+  var mock = require(env.modulePath);
+  mock(config);
 
-  var gulpInst = require(env.modulePath);
-  logEvents(gulpInst);
+  //process.nextTick(function() {
 
-  process.nextTick(function() {
-    if (simpleTasksFlag) {
-      return logTasksSimple(env, gulpInst);
-    }
-    if (tasksFlag) {
-      return logTasks(env, gulpInst);
-    }
-    gulpInst.start.apply(gulpInst, toRun);
-  });
+  //});
 }
