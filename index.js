@@ -2,6 +2,7 @@
 var express = require('express')
 var logger = require('morgan');
 var fs = require("fs");
+var path = require("path");
 
 var getEachAPI = function(dir, fn) {
     fs.readdirSync(dir).forEach(function(file) {
@@ -23,7 +24,7 @@ function matchRoute(list, route){
     routeSlice.pop();
     route = routeSlice.join('|');
     list.every(function(apiConfig){
-        if(apiConfig.route.indexOf(match) > -1){
+        if(apiConfig.url.indexOf(match) > -1){
             filterList.push(apiConfig);
         }
         return true;
@@ -55,15 +56,10 @@ function start(config){
         var url = req.url;
         var apiConfig = matchRoute(routeList, url);
         if(apiConfig){
-            var response = apiConfig.response[apiConfig.responseIndex];
-            if(response.data){
-                res.json(apiConfig.response[0].data);
-            }
-            if(response.dataPath){
-                var relativePath = (config.apisPath+'/').replace('//','/');
-                var file = fs.readFileSync(relativePath + response.dataPath, 'utf8');
-                res.json(JSON.parse(file));
-            }
+            var response = apiConfig.responseOption[apiConfig.responseKey];
+            var filePath = path.join(config.cwd, config.apisPath, response.path);
+            var file = fs.readFileSync(filePath, 'utf8');
+            res.json(JSON.parse(file));
         }else{
             next();
         }
