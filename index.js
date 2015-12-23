@@ -43,36 +43,40 @@ function matchRoute(list, route){
     }
 }
 
+function getResponseByAPIConfig(config, apiConfig){
+    var response = apiConfig.responseOption[apiConfig.responseKey];
+    var filePath = path.join(config.cwd, config.apisPath, response.path);
+    var file = fs.readFileSync(filePath, 'utf8');
+    return JSON.parse(file);
+}
+
+function getAllAPIConfig(apisPath){
+    var list = [];
+    getEachAPI(apisPath, function(apiConfig){
+        list.push(apiConfig);
+    });
+    return list;
+}
+
 function start(config){
     var app = express();
     app.use(logger('dev'));
     app.use(express.static(config.cwd));
     app.get('/', express.static(config.cwd));
     app.get('*', function(req, res, next){
-        var routeList = [];
-        getEachAPI(config.apisPath, function(apiConfig){
-            routeList.push(apiConfig);
-        });
-        var url = req.url;
-        var apiConfig = matchRoute(routeList, url);
+        var apis = getAllAPIConfig(config.apisPath);
+        var apiConfig = matchRoute(apis, req.url);
         if(apiConfig){
-            var response = apiConfig.responseOption[apiConfig.responseKey];
-            var filePath = path.join(config.cwd, config.apisPath, response.path);
-            var file = fs.readFileSync(filePath, 'utf8');
-            res.json(JSON.parse(file));
+            res.json(getResponseByAPIConfig(config, apiConfig));
         }else{
             next();
         }
     });
     app.post('*', function(req, res, next){
-        var routeList = [];
-        getEachAPI(config.apisPath, function(apiConfig){
-            routeList.push(apiConfig);
-        });
-        var url = req.url;
-        var apiConfig = matchRoute(routeList, url);
+        var apis = getAllAPIConfig(config.apisPath);
+        var apiConfig = matchRoute(apis, req.url);
         if(apiConfig){
-            res.json(apiConfig.response[0].data);
+            res.json(getResponseByAPIConfig(config, apiConfig));
         }else{
             next();
         }
