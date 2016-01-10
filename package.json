@@ -27,20 +27,19 @@
     "chameleon": "./bin/chameleon.js"
   },
   "dependencies": {
+    "chalk": "^1.0.0",
     "express": "^4.13.0",
     "gulp-util": "^3.0.0",
     "interpret": "^0.6.2",
     "liftoff": "^2.1.0",
     "minimist": "^1.1.0",
-    "v8flags": "^2.0.2",
-    "chalk": "^1.0.0",
+    "morgan": "^1.6.1",
+    "multer": "^1.1.0",
     "semver": "^4.1.0",
     "tildify": "^1.0.0",
-    "morgan":"^1.6.1"
+    "v8flags": "^2.0.2"
   },
-  "devDependencies": {
-
-  },
+  "devDependencies": {},
   "engines": {
     "node": ">= 0.9"
   },

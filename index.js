@@ -3,6 +3,7 @@ var express = require('express')
 var logger = require('morgan');
 var fs = require("fs");
 var path = require("path");
+var CMExtension = require("./extension/");
 
 var getEachAPI = function(dir, fn) {
     fs.readdirSync(dir).forEach(function(file) {
@@ -17,29 +18,70 @@ var getEachAPI = function(dir, fn) {
     });
 };
 
+function getParams(route){
+    var routeParams = [];
+    if(route.indexOf('?') > -1){
+        routeParams = route.split('?')[1];
+        if(routeParams.indexOf('&') > -1){
+            routeParams = routeParams.split('&');
+        }else{
+            if(routeParams.length > 0){
+                routeParams = [routeParams];
+            }
+        }
+    }
+    return routeParams;
+}
+
+function getPathSlice(route){
+    if(route.indexOf('?') > -1){
+        route = route.split('?')[0];
+    }
+    return route.replace(/([^\w\s\d])/g, '|').split('|');
+}
+
+function arraySimilar(a1, a2){
+    var score = 0;
+    if(a1.length > 0 && a2.length >0){
+        a1 = a1.concat([]);
+        a2 = a2.concat([]);
+        a1.every(function(o1,i){
+            a2.every(function(o2,j){
+                if(a1[i] === a2[j]){
+                    score++;
+                    a2[j] = null;
+                    a1[i] = null;
+                }
+                return true;
+            })
+            return true;
+        })
+    }
+    return score;
+}
+
 function matchRoute(list, route){
-    var filterList = [];
-    var routeSlice = route.replace(/([^\w\s])/g, '|').split('|');
-    var match = routeSlice[routeSlice.length - 1];
-    routeSlice.pop();
-    route = routeSlice.join('|');
+    var routeParams = getParams(route);
+    var pathSlice = getPathSlice(route);
+    var maxScore = 0;
+    var stepResult = [];
     list.every(function(apiConfig){
-        if(apiConfig.url.indexOf(match) > -1){
-            filterList.push(apiConfig);
+        var apiParams = getParams(apiConfig.url);
+        var apiPathSlice = getPathSlice(apiConfig.url);
+        var score = 0;
+        score += arraySimilar(routeParams, apiParams);
+        score += arraySimilar(pathSlice, apiPathSlice);
+        if(score > maxScore){
+            maxScore = score;
+            stepResult.push(apiConfig);
         }
         return true;
     })
-    if(filterList.length > 1){
-        if(routeSlice.length == 1 && routeSlice[0].length === 0){
-            return filterList[0];
-        }
-        return matchRoute(filterList, route);
+
+    if(stepResult.length > 0){
+        return stepResult[stepResult.length - 1];
     }else{
-        if(filterList.length > 0){
-            return filterList[0];
-        }else{
-            return null;
-        }
+        return null;
     }
 }
 
@@ -76,6 +118,10 @@ function start(config){
         var apis = getAllAPIConfig(config.apisPath);
         var apiConfig = matchRoute(apis, req.url);
         if(apiConfig){
+            if(apiConfig.extension && CMExtension[apiConfig.extension]){
+                apiConfig.extensionConfig.cwd = config.cwd;
+                CMExtension[apiConfig.extension](req, res, apiConfig.extensionConfig);
+            }
             res.json(getResponseByAPIConfig(config, apiConfig));
         }else{
             next();
