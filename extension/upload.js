@@ -59,7 +59,7 @@ DiskStorage.prototype._removeFile = function _removeFile (req, file, cb) {
   fs.unlink(path, cb)
 }
 
-function main(req, res, extensionConfig){
+function main(req, res, extensionConfig, jsonData){
     var storage = new DiskStorage({
       destination: function (req, file, cb) {
         cb(null, extensionConfig.cwd + '/uploads/');
@@ -73,6 +73,10 @@ function main(req, res, extensionConfig){
         if(err){
             console.log(err);
         }
+        var newData = JSON.stringify(jsonData).replace(/\${chameleon\.([^}]+)}/,function(str){
+            return '/uploads/' + req.file.filename;
+        })
+        res.json(JSON.parse(newData));
     });
 }
 

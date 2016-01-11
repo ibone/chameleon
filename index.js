@@ -118,11 +118,13 @@ function start(config){
         var apis = getAllAPIConfig(config.apisPath);
         var apiConfig = matchRoute(apis, req.url);
         if(apiConfig){
+            var jsonData = getResponseByAPIConfig(config, apiConfig);
             if(apiConfig.extension && CMExtension[apiConfig.extension]){
                 apiConfig.extensionConfig.cwd = config.cwd;
-                CMExtension[apiConfig.extension](req, res, apiConfig.extensionConfig);
+                CMExtension[apiConfig.extension](req, res, apiConfig.extensionConfig, jsonData);
+            }else{
+                res.json(jsonData);
             }
-            res.json(getResponseByAPIConfig(config, apiConfig));
         }else{
             next();
         }
