@@ -59,24 +59,34 @@ DiskStorage.prototype._removeFile = function _removeFile (req, file, cb) {
   fs.unlink(path, cb)
 }
 
-function main(req, res, extensionConfig, jsonData){
+function main(extensionConfig, req, mockTemplate, callback){
     var storage = new DiskStorage({
-      destination: function (req, file, cb) {
-        cb(null, extensionConfig.cwd + '/uploads/');
-      },
-      filename: function (req, file, cb) {
-        cb(null, file.originalname);
-      }
+        destination: function (req, file, cb) {
+            cb(null, path.join(extensionConfig.cwd, extensionConfig.saveFolder));
+        },
+        filename: function (req, file, cb) {
+            cb(null, file.originalname);
+        }
     })
     var upload = multer({ storage: storage })
-    upload.single(extensionConfig.formName)(req, res, function(err){
+    upload.single(extensionConfig.formName)(req, null, function(err){
         if(err){
             console.log(err);
         }
-        var newData = JSON.stringify(jsonData).replace(/\${chameleon\.([^}]+)}/,function(str){
-            return '/uploads/' + req.file.filename;
+        //提供fileName filePath
+        console.log(req.file.filename);
+        console.log(mockTemplate);
+        var newData = mockTemplate.replace(/\${chameleon\.([^}]+)}/g,function(wholeMatch, m1){
+            if('fileName' == m1){
+                return req.file.filename;
+            }
+            if('filePath' == m1){
+                return extensionConfig.saveFolder;
+            }
+            return 'null';
         })
-        res.json(JSON.parse(newData));
+        console.log(newData);
+        callback(newData);
     });
 }
 
