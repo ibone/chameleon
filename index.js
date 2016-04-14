@@ -19,71 +19,21 @@ var getEachAPI = function(dir, fn) {
     });
 };
 
-function getParams(route){
-    var routeParams = [];
-    if(route.indexOf('?') > -1){
-        routeParams = route.split('?')[1];
-        if(routeParams.indexOf('&') > -1){
-            routeParams = routeParams.split('&');
-        }else{
-            if(routeParams.length > 0){
-                routeParams = [routeParams];
-            }
-        }
-    }
-    return routeParams;
-}
-
-function getPathSlice(route){
-    if(route.indexOf('?') > -1){
-        route = route.split('?')[0];
-    }
-    return route.replace(/([^\w\s\d])/g, '|').split('|');
-}
-
-function arraySimilar(a1, a2){
-    var score = 0;
-    if(a1.length > 0 && a2.length >0){
-        a1 = a1.concat([]);
-        a2 = a2.concat([]);
-        a1.every(function(o1,i){
-            a2.every(function(o2,j){
-                if(a1[i] === a2[j]){
-                    score++;
-                    a2[j] = null;
-                    a1[i] = null;
-                }
-                return true;
-            })
-            return true;
-        })
-    }
-    return score;
-}
-
 function matchRoute(list, route){
-    var routeParams = getParams(route);
-    var pathSlice = getPathSlice(route);
-    var maxScore = 0;
-    var stepResult = [];
+    var result = null;
     list.every(function(apiConfig){
-        var apiParams = getParams(apiConfig.url);
-        var apiPathSlice = getPathSlice(apiConfig.url);
-        var score = 0;
-        score += arraySimilar(routeParams, apiParams);
-        score += arraySimilar(pathSlice, apiPathSlice);
-        if(score > maxScore){
-            maxScore = score;
-            stepResult.push(apiConfig);
+        var urlReg = apiConfig.urlReg;
+        var reg = new RegExp(urlReg);
+        if(urlReg && reg.test(route)){
+            result = apiConfig;
+            return false;
+        }else if(route.indexOf(apiConfig.url) > -1){
+            result = apiConfig;
+            return false;
         }
         return true;
     })
-
-    if(stepResult.length > 0){
-        return stepResult[stepResult.length - 1];
-    }else{
-        return null;
-    }
+    return result;
 }
 
 function getResponseByAPIConfig(config, apiConfig, query){
@@ -151,16 +101,16 @@ function getAndPost(req, res, next, config){
             apiConfig.extensionConfig.cwd = config.cwd;
             CMExtension.executeExtension(apiConfig.extension, apiConfig.extensionConfig, req , mockTemplate, function(result){
                 var json = JSON.parse(result);
-                res.json(json);
+                res.send(JSON.stringify(json));
             });
         }else{
             CMExtension.executeExtension('custom',{}, req , mockTemplate, function(result){
                 var json = JSON.parse(result);
-                res.json(json);
+                res.send(JSON.stringify(json));
             });
         }
     }else{
-        next();
+        res.send('{"code":1,"errInfo":"no api"}');
     }
 }
 //读取配置，开服务，指向静态路径，生成接口
