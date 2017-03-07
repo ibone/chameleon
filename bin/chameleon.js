@@ -98,6 +98,9 @@ function handleArguments(env) {
 
   var config = require(env.configPath);
   config.cwd = env.cwd;
+  if(!config.rootPath){
+      config.rootPath = env.cwd;
+  }
   gutil.log('Using chameleonfile', chalk.magenta(tildify(env.configPath)));
   var mock = require(env.modulePath);
   mock(config);

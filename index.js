@@ -5,6 +5,7 @@ var fs = require("fs");
 var path = require("path");
 var url = require('url');
 var CMExtension = require("./extension/");
+var USER_SETTING_PATH = path.join(process.cwd(), '/chameleonsetting.json');
 
 var getEachAPI = function(dir, fn) {
     fs.readdirSync(dir).forEach(function(file) {
@@ -38,7 +39,7 @@ function matchRoute(list, route){
 
 function getResponseByAPIConfig(config, apiConfig, query){
     var apiConfigName = apiConfig.name;
-    //http://localhost:3222/?chameleon=getList|noData
+    //?chameleon=apiName|responseKey
     var chameleonE2eString = query['chameleon'];
     var chameleonE2eTestConfig = {
         apiName : null,
@@ -57,6 +58,15 @@ function getResponseByAPIConfig(config, apiConfig, query){
     if(chameleonE2eTestConfig.apiName == apiConfig.name){
         responseKey = chameleonE2eTestConfig.responseKey;
     }
+
+    if (fs.existsSync(USER_SETTING_PATH)) {
+        var setting = fs.readFileSync(USER_SETTING_PATH, "utf8")
+        setting = JSON.parse(setting);
+        if(typeof setting[apiConfig.name] == 'string'){
+            responseKey = setting[apiConfig.name]
+        }
+    }
+
     var response = apiConfig.responseOption[responseKey];
     var filePath = path.join(config.cwd, config.apisPath, response.path);
     var file = fs.readFileSync(filePath, 'utf8');
@@ -74,20 +84,14 @@ function getAllAPIConfig(apisPath){
 function start(config){
     var app = express();
     app.use(logger('dev'));
-    app.use(express.static(config.cwd));
-    app.get('/', express.static(config.cwd));
-    app.get('*', function(req, res, next){
-        getAndPost(req, res, next, config);
-    });
-    app.post('*', function(req, res, next){
-        getAndPost(req, res, next, config);
-    });
-
+    initStaticServer(app, config)
+    initDashboard(app, config);
+    initAPI(app, config);
     app.listen(config.port||3000);
 }
 
-function getAndPost(req, res, next, config){
-    var url_parts = url.parse(req.headers.referer, true);
+function requestAPI(req, res, next, config){
+    var url_parts = url.parse(req.url, true);
     var query = url_parts.query;
     var apis = getAllAPIConfig(config.apisPath);
     var apiConfig = matchRoute(apis, req.url);
@@ -97,7 +101,7 @@ function getAndPost(req, res, next, config){
         mockTemplate.chameleonApi = apiConfig.url;
         mockTemplate = JSON.stringify(mockTemplate);
         if(apiConfig.extension && CMExtension.hasExtension(apiConfig.extension)){
-            console.log('executeExtension',apiConfig.extension);
+            console.log('executeExtension', apiConfig.extension);
             apiConfig.extensionConfig.cwd = config.cwd;
             CMExtension.executeExtension(apiConfig.extension, apiConfig.extensionConfig, req , mockTemplate, function(result){
                 var json = JSON.parse(result);
@@ -110,9 +114,93 @@ function getAndPost(req, res, next, config){
             });
         }
     }else{
-        res.send('{"code":1,"errInfo":"no api"}');
+        res.send('{"code": 0, "errInfo": "no api"}');
     }
 }
-//读取配置，开服务，指向静态路径，生成接口
+
+function initDashboard(app, config){
+    app.get('/cmockadmin', function(req, res, next){
+        res.sendFile(path.join(__dirname, '/dashboard/index.html'));
+    });
+
+    app.get('/cmockadmin/update', function(req, res, next){
+        var url_parts = url.parse(req.url, true);
+        var apiName = url_parts.query['apiName'];
+        var responseKey = url_parts.query['responseKey'];
+        if(typeof apiName == 'string' && typeof responseKey == 'string'){
+            updateUserSetting(apiName, responseKey);
+            res.send('{"code": 1}');
+        }else{
+            res.send('{"code": 0, "errInfo": "param error"}');
+        }
+    });
+
+    app.get('/cmockadmin/list', function(req, res, next){
+        var allAPI = getAllAPIConfig(config.apisPath);
+        var setting = {};
+        if (fs.existsSync(USER_SETTING_PATH)) {
+            setting = fs.readFileSync(USER_SETTING_PATH, "utf8");
+            setting = JSON.parse(setting);
+        }
+        allAPI.every(function(api){
+            var apiName = api.name;
+            api.optionNameList = [];
+            for(var key in api.responseOption){
+                api.optionNameList.push(key)
+            }
+            if(setting[apiName]){
+                api.responseKey = setting[apiName]
+            }
+            return true;
+        })
+        var data = {
+            code: 1,
+            data: allAPI
+        }
+        res.send(data);
+    });
+}
+
+function updateUserSetting(apiName, responseKey){
+    if (fs.existsSync(USER_SETTING_PATH)) {
+        fs.readFile(USER_SETTING_PATH, "utf8", function(err, data) {
+            var setting = JSON.parse(data);
+            console.log(setting);
+            setting[apiName] = responseKey;
+            console.log(setting);
+            console.log(responseKey);
+            setting = JSON.stringify(setting, null, 4);
+            console.log(setting);
+            fs.writeFile(USER_SETTING_PATH, setting, function(err){
+                if(err) {
+                    return console.log(err);
+                }
+            })
+        });
+    }else{
+        var setting = {};
+        setting[apiName] = responseKey;
+        setting = JSON.stringify(setting, null, 4);
+        fs.writeFile(USER_SETTING_PATH, setting, function(err){
+            if(err) {
+                return console.log(err);
+            }
+        })
+    }
+}
+
+function initStaticServer(app, config){
+    app.use(express.static(config.rootPath));
+    app.get('/', express.static(config.rootPath));
+}
+
+function initAPI(app, config){
+    app.get('*', function(req, res, next){
+        requestAPI(req, res, next, config);
+    });
+    app.post('*', function(req, res, next){
+        requestAPI(req, res, next, config);
+    });
+}
 
 module.exports = start;

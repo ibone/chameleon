@@ -1,8 +1,8 @@
 {
   "name": "chameleon-mock",
   "description": "The mock backend build system",
-  "version": "0.0.2",
-  "homepage": "https://github.com/ibone/chameleon",
+  "version": "0.0.6",
+  "homepage": "https://github.com/ibone/chameleon-mock",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ibone/chameleon.git"
@@ -21,7 +21,8 @@
   ],
   "files": [
     "index.js",
-    "bin"
+    "bin/*.js",
+    "extension/*.js"
   ],
   "bin": {
     "chameleon": "./bin/chameleon.js"
