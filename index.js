@@ -87,7 +87,7 @@ function start(config){
     initStaticServer(app, config)
     initDashboard(app, config);
     initAPI(app, config);
-    app.listen(config.port||3000);
+    app.listen(config.port||3000, '127.0.0.1');
 }
 
 function requestAPI(req, res, next, config){
