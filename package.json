@@ -22,7 +22,8 @@
   "files": [
     "index.js",
     "bin/*.js",
-    "extension/*.js"
+    "extension/*.js",
+    "dashboard/index.html"
   ],
   "bin": {
     "chameleon": "./bin/chameleon.js"
