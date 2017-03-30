@@ -9,6 +9,7 @@ var USER_SETTING_PATH = path.join(process.cwd(), '/chameleonsetting.json');
 
 var getEachAPI = function(dir, fn) {
     fs.readdirSync(dir).forEach(function(file) {
+        if(!/.json$/.test(file)) return;
         file = dir+'/'+file;
         var stat = fs.statSync(file);
 
