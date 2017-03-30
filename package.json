@@ -1,7 +1,7 @@
 {
   "name": "chameleon-mock",
   "description": "The mock backend build system",
-  "version": "0.0.9",
+  "version": "0.0.10",
   "homepage": "https://github.com/ibone/chameleon-mock",
   "repository": {
     "type": "git",
