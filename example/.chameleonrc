@@ -1,0 +1,6 @@
+{
+    "name":"chameleon-mock demo",
+    "port":"8080",
+    "mockPath":"./mock",
+    "rootPath":"./"
+}

@@ -1,0 +1,14 @@
+{
+  "name": "list",
+  "describe": "list data",
+  "url": "/list",
+  "method": "GET",
+  "dataType": "JSON",
+  "responseKey": "firstKey",
+  "responseOptions": {
+    "firstKey": {
+      "desc": "normal order",
+      "path": "./list/firstData.json"
+    }
+  }
+}
