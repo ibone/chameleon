@@ -1,207 +1,167 @@
-'use strict';
 var express = require('express')
-var logger = require('morgan');
-var fs = require("fs");
-var path = require("path");
-var url = require('url');
-var CMExtension = require("./extension/");
-var USER_SETTING_PATH = path.join(process.cwd(), '/chameleonsetting.json');
+var _ = require('lodash')
+var path2Regexp = require('path-to-regexp')
+var logger = require('morgan')
+var fs = require('fs')
+var path = require('path')
+var url = require('url')
+var CMPlugins = require('./plugins/')
 
-var getEachAPI = function(dir, fn) {
-    fs.readdirSync(dir).forEach(function(file) {
-        if(!/.json$/.test(file)) return;
-        file = dir+'/'+file;
-        var stat = fs.statSync(file);
+var getEachAPI = function (dir, fn) {
+  fs.readdirSync(dir).forEach(function (file) {
+    if (!/.json$/.test(file)) return
+    file = dir + '/' + file
+    fn(JSON.parse(fs.readFileSync(file, 'utf8')))
+  })
+}
 
-        if (stat && stat.isDirectory()) {
-            //results = results.concat(_getAllFilesFromFolder(file))
-        } else {
-            fn(JSON.parse(fs.readFileSync(file, 'utf8')));
-        };
-    });
-};
+function matchMock (allMocks, path) {
+  var reg = path2Regexp(path)
+  var result = allMocks.filter(function (config) {
+    return reg.test(config.url)
+  })
+  if (result.length > 0) {
+    var mock = result[0]
+    mock.allUrl = result.map(function (m) {
+      return m.url
+    }).join(',')
+    return mock
+  } else {
+    return null
+  }
+}
 
-function matchRoute(list, route){
-    var result = null;
-    list.every(function(apiConfig){
-        var urlReg = apiConfig.urlReg;
-        var reg = new RegExp(urlReg);
-        if(urlReg && reg.test(route)){
-            result = apiConfig;
-            return false;
-        }else if(route.indexOf(apiConfig.url) > -1){
-            result = apiConfig;
-            return false;
-        }
-        return true;
+function getMockData (config, mock, query) {
+  var responseKey = mock.responseKey
+
+  // user setting cover
+  if (fs.existsSync(config.userSettingPath)) {
+    var setting = fs.readFileSync(config.userSettingPath, 'utf8')
+    setting = JSON.parse(setting)
+    if (_.isString(setting[mock.name])) {
+      responseKey = setting[mock.name]
+    }
+  }
+
+  var option = mock.responseOptions[responseKey]
+  var filePath = path.join(config.mockPath, option.path)
+  var mockData = fs.readFileSync(filePath, 'utf8')
+  return mockData
+}
+
+function getAllMocks (mockPath) {
+  var list = []
+  getEachAPI(mockPath, function (apiConfig) {
+    list.push(apiConfig)
+  })
+  return list
+}
+
+function requestHandler (req, res, config) {
+  var urlParts = url.parse(req.url, true)
+  var query = urlParts.query
+  var allMocks = getAllMocks(config.mockPath)
+  var mock = matchMock(allMocks, req.url)
+  if (mock) {
+    var mockData = getMockData(config, mock, query)
+    mockData = JSON.parse(mockData)
+    mockData.$url = mock.url
+    mockData.$allUrl = mock.allUrl
+    mockData = JSON.stringify(mockData)
+    mock.appPath = config.appPath
+    CMPlugins.mount(mock, req, mockData, function (result) {
+      var json = JSON.parse(result)
+      res.send(JSON.stringify(json))
     })
-    return result;
+  } else {
+    res.send('{"code": 0, "errInfo": "no api"}')
+  }
 }
 
-function getResponseByAPIConfig(config, apiConfig, query){
-    var apiConfigName = apiConfig.name;
-    //?chameleon=apiName|responseKey
-    var chameleonE2eString = query['chameleon'];
-    var chameleonE2eTestConfig = {
-        apiName : null,
-        responseKey : null
+function initAdmin (app, config) {
+  var adminStaticPath = path.join(__dirname, '/admin')
+  app.use(express.static(adminStaticPath))
+  app.get('/chameleon-mock/admin', express.static(adminStaticPath))
+  app.get('/chameleon-mock/admin/update', function (req, res, next) {
+    var urlParts = url.parse(req.url, true)
+    var apiName = urlParts.query['apiName']
+    var responseKey = urlParts.query['responseKey']
+    if (_.isString(apiName) && _.isString(responseKey)) {
+      updateUserSetting(apiName, responseKey, config)
+      res.send('{"code": 1}')
+    } else {
+      res.send('{"code": 0, "errInfo": "param error"}')
     }
+  })
 
-    if(chameleonE2eString && chameleonE2eString.length > 0){
-        chameleonE2eString = chameleonE2eString.split('|');
-        chameleonE2eTestConfig = {
-            apiName : chameleonE2eString[0],
-            responseKey : chameleonE2eString[1]
-        }
+  app.get('/chameleon-mock/admin/list', function (req, res, next) {
+    var allMocks = getAllMocks(config.mockPath)
+    var setting = {}
+    if (fs.existsSync(config.userSettingPath)) {
+      setting = fs.readFileSync(config.userSettingPath, 'utf8')
+      setting = JSON.parse(setting)
     }
-
-    var responseKey = apiConfig.responseKey;
-    if(chameleonE2eTestConfig.apiName == apiConfig.name){
-        responseKey = chameleonE2eTestConfig.responseKey;
+    allMocks.forEach(function (api) {
+      var apiName = api.name
+      api.optionNameList = []
+      for (var key in api.responseOptions) {
+        api.optionNameList.push(key)
+      }
+      if (setting[apiName]) {
+        api.responseKey = setting[apiName]
+      }
+    })
+    var data = {
+      code: 1,
+      data: allMocks
     }
+    res.send(data)
+  })
+}
 
-    if (fs.existsSync(USER_SETTING_PATH)) {
-        var setting = fs.readFileSync(USER_SETTING_PATH, "utf8")
-        setting = JSON.parse(setting);
-        if(typeof setting[apiConfig.name] == 'string'){
-            responseKey = setting[apiConfig.name]
-        }
+function updateUserSetting (apiName, responseKey, config) {
+  if (fs.existsSync(config.userSettingPath)) {
+    fs.readFile(config.userSettingPath, 'utf8', function (err, data) {
+      if (err) return console.log(err.stack)
+      var setting = JSON.parse(data)
+      setting[apiName] = responseKey
+      setting = JSON.stringify(setting, null, 4)
+      fs.writeFile(config.userSettingPath, setting, function (err) {
+        if (err) console.log(err)
+      })
+    })
+  } else {
+    var setting = {
+      apiName: responseKey
     }
-
-    var response = apiConfig.responseOption[responseKey];
-    var filePath = path.join(config.cwd, config.apisPath, response.path);
-    var file = fs.readFileSync(filePath, 'utf8');
-    return file;
+    setting = JSON.stringify(setting, null, 4)
+    fs.writeFile(config.userSettingPath, setting, function (err) {
+      if (err) console.log(err)
+    })
+  }
 }
 
-function getAllAPIConfig(apisPath){
-    var list = [];
-    getEachAPI(apisPath, function(apiConfig){
-        list.push(apiConfig);
-    });
-    return list;
+function initStaticServer (app, config) {
+  app.use(express.static(config.rootPath))
+  app.get('/', express.static(config.rootPath))
 }
 
-function start(config){
-    var app = express();
-    app.use(logger('dev'));
-    initStaticServer(app, config)
-    initDashboard(app, config);
-    initAPI(app, config);
-    app.listen(config.port||3000, '127.0.0.1');
+function initAPI (app, config) {
+  app.get('*', function (req, res) {
+    requestHandler(req, res, config)
+  })
+  app.post('*', function (req, res) {
+    requestHandler(req, res, config)
+  })
 }
 
-function requestAPI(req, res, next, config){
-    var url_parts = url.parse(req.url, true);
-    var query = url_parts.query;
-    var apis = getAllAPIConfig(config.apisPath);
-    var apiConfig = matchRoute(apis, req.url);
-    if(apiConfig){
-        var mockTemplate = getResponseByAPIConfig(config, apiConfig, query);
-        mockTemplate = JSON.parse(mockTemplate);
-        mockTemplate.chameleonApi = apiConfig.url;
-        mockTemplate = JSON.stringify(mockTemplate);
-        if(apiConfig.extension && CMExtension.hasExtension(apiConfig.extension)){
-            console.log('executeExtension', apiConfig.extension);
-            apiConfig.extensionConfig.cwd = config.cwd;
-            CMExtension.executeExtension(apiConfig.extension, apiConfig.extensionConfig, req , mockTemplate, function(result){
-                var json = JSON.parse(result);
-                res.send(JSON.stringify(json));
-            });
-        }else{
-            CMExtension.executeExtension('custom',{}, req , mockTemplate, function(result){
-                var json = JSON.parse(result);
-                res.send(JSON.stringify(json));
-            });
-        }
-    }else{
-        res.send('{"code": 0, "errInfo": "no api"}');
-    }
+function main (config) {
+  var app = express()
+  app.use(logger('dev'))
+  initStaticServer(app, config)
+  initAdmin(app, config)
+  initAPI(app, config)
+  app.listen(config.port || 3000, '127.0.0.1')
 }
 
-function initDashboard(app, config){
-    app.get('/cmockadmin', function(req, res, next){
-        res.sendFile(path.join(__dirname, '/dashboard/index.html'));
-    });
-
-    app.get('/cmockadmin/update', function(req, res, next){
-        var url_parts = url.parse(req.url, true);
-        var apiName = url_parts.query['apiName'];
-        var responseKey = url_parts.query['responseKey'];
-        if(typeof apiName == 'string' && typeof responseKey == 'string'){
-            updateUserSetting(apiName, responseKey);
-            res.send('{"code": 1}');
-        }else{
-            res.send('{"code": 0, "errInfo": "param error"}');
-        }
-    });
-
-    app.get('/cmockadmin/list', function(req, res, next){
-        var allAPI = getAllAPIConfig(config.apisPath);
-        var setting = {};
-        if (fs.existsSync(USER_SETTING_PATH)) {
-            setting = fs.readFileSync(USER_SETTING_PATH, "utf8");
-            setting = JSON.parse(setting);
-        }
-        allAPI.every(function(api){
-            var apiName = api.name;
-            api.optionNameList = [];
-            for(var key in api.responseOption){
-                api.optionNameList.push(key)
-            }
-            if(setting[apiName]){
-                api.responseKey = setting[apiName]
-            }
-            return true;
-        })
-        var data = {
-            code: 1,
-            data: allAPI
-        }
-        res.send(data);
-    });
-}
-
-function updateUserSetting(apiName, responseKey){
-    if (fs.existsSync(USER_SETTING_PATH)) {
-        fs.readFile(USER_SETTING_PATH, "utf8", function(err, data) {
-            var setting = JSON.parse(data);
-            console.log(setting);
-            setting[apiName] = responseKey;
-            console.log(setting);
-            console.log(responseKey);
-            setting = JSON.stringify(setting, null, 4);
-            console.log(setting);
-            fs.writeFile(USER_SETTING_PATH, setting, function(err){
-                if(err) {
-                    return console.log(err);
-                }
-            })
-        });
-    }else{
-        var setting = {};
-        setting[apiName] = responseKey;
-        setting = JSON.stringify(setting, null, 4);
-        fs.writeFile(USER_SETTING_PATH, setting, function(err){
-            if(err) {
-                return console.log(err);
-            }
-        })
-    }
-}
-
-function initStaticServer(app, config){
-    app.use(express.static(config.rootPath));
-    app.get('/', express.static(config.rootPath));
-}
-
-function initAPI(app, config){
-    app.get('*', function(req, res, next){
-        requestAPI(req, res, next, config);
-    });
-    app.post('*', function(req, res, next){
-        requestAPI(req, res, next, config);
-    });
-}
-
-module.exports = start;
+module.exports = main
