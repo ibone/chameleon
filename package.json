@@ -1,7 +1,7 @@
 {
   "name": "getman",
   "description": "The mock backend build system",
-  "version": "0.0.1",
+  "version": "0.0.10",
   "homepage": "https://github.com/ibone/chameleon-mock",
   "repository": {
     "type": "git",
@@ -9,8 +9,7 @@
   },
   "author": {
     "name": "ibone",
-    "email": "iboneyu@gmail.com",
-    "url": "http://ibone.me/"
+    "email": "ibonework@gmail.com"
   },
   "tags": [
     "mock",
@@ -21,15 +20,16 @@
   ],
   "files": [
     "index.js",
-    "bin/*.js",
-    "extension/*.js",
-    "dashboard/index.html"
+    "bin/chameleon-mock.js",
+    "plugins/*.js",
+    "admin/index.html"
   ],
   "bin": {
     "chameleon": "./bin/chameleon.js"
   },
   "dependencies": {
     "chalk": "^1.0.0",
+    "commander": "^2.11.0",
     "eslint": "^4.2.0",
     "eslint-config-vue": "^2.0.2",
     "eslint-plugin-html": "^3.0.0",
