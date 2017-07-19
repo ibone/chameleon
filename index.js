@@ -80,8 +80,7 @@ function requestHandler (req, res, config) {
 
 function initAdmin (app, config) {
   var adminStaticPath = path.join(__dirname, '/admin')
-  app.use(express.static(adminStaticPath))
-  app.get('/chameleon-mock/admin', express.static(adminStaticPath))
+  app.use('/chameleon-mock/admin', express.static(adminStaticPath))
   app.get('/chameleon-mock/admin/update', function (req, res, next) {
     var urlParts = url.parse(req.url, true)
     var apiName = urlParts.query['apiName']
@@ -101,14 +100,16 @@ function initAdmin (app, config) {
       setting = fs.readFileSync(config.userSettingPath, 'utf8')
       setting = JSON.parse(setting)
     }
-    allMocks.forEach(function (api) {
-      var apiName = api.name
-      api.optionNameList = []
-      for (var key in api.responseOptions) {
-        api.optionNameList.push(key)
+    allMocks.forEach(function (mock) {
+      var mockName = mock.name
+      mock.responseOptionsList = []
+      for (var key in mock.responseOptions) {
+        var option = mock.responseOptions[key]
+        option.name = key
+        mock.responseOptionsList.push(option)
       }
-      if (setting[apiName]) {
-        api.responseKey = setting[apiName]
+      if (setting[mockName]) {
+        mock.responseKey = setting[mockName]
       }
     })
     var data = {
@@ -158,7 +159,7 @@ function initAPI (app, config) {
 function main (config) {
   var app = express()
   app.use(logger('dev'))
-  initStaticServer(app, config)
+  //initStaticServer(app, config)
   initAdmin(app, config)
   initAPI(app, config)
   app.listen(config.port || 3000, '127.0.0.1')
