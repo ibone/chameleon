@@ -1,7 +1,11 @@
 {
-    "extends": "vue",
-    "rules": {
-      "indent": ["error", 2],
-      "no-useless-escape": 0
-    }
+  "extends": "vue",
+  "rules": {
+    "indent": ["error", 2],
+    "no-useless-escape": 0
+  },
+  "globals": {
+    "$": true,
+    "Vue": true
+  }
 }
