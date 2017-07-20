@@ -12,7 +12,8 @@ var globalFn = {
   },
   id: function () {
     return _.uniqueId('id_')
-  }
+  },
+  _: _
 }
 
 function main (option, mockData, env, callback) {

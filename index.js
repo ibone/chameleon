@@ -15,17 +15,13 @@ var getEachAPI = function (dir, fn) {
   })
 }
 
-function matchMock (allMocks, path) {
+function matchMocks (allMocks, path) {
   var reg = path2Regexp(path)
   var result = allMocks.filter(function (config) {
     return reg.test(config.url)
   })
   if (result.length > 0) {
-    var mock = result[0]
-    mock.allUrl = result.map(function (m) {
-      return m.url
-    }).join(',')
-    return mock
+    return result
   } else {
     return null
   }
@@ -61,16 +57,14 @@ function requestHandler (req, res, config) {
   var urlParts = url.parse(req.url, true)
   var query = urlParts.query
   var allMocks = getAllMocks(config.mockPath)
-  var mock = matchMock(allMocks, req.url)
-  if (mock) {
+  var mocks = matchMocks(allMocks, req.url)
+  if (mocks) {
+    var mock = mocks[0]
     var mockData = getMockData(config, mock, query)
-    mockData = JSON.parse(mockData)
-    mockData.$url = mock.url
-    mockData.$allUrl = mock.allUrl
-    mockData = JSON.stringify(mockData)
     mock.appPath = config.appPath
     CMPlugins.mount(mock, req, mockData, function (result) {
       var json = JSON.parse(result)
+      json.__matchMocks = mocks
       res.send(JSON.stringify(json))
     })
   } else {
@@ -83,10 +77,10 @@ function initAdmin (app, config) {
   app.use('/chameleon-mock/admin', express.static(adminStaticPath))
   app.get('/chameleon-mock/admin/update', function (req, res, next) {
     var urlParts = url.parse(req.url, true)
-    var apiName = urlParts.query['apiName']
+    var mockName = urlParts.query['mockName']
     var responseKey = urlParts.query['responseKey']
-    if (_.isString(apiName) && _.isString(responseKey)) {
-      updateUserSetting(apiName, responseKey, config)
+    if (_.isString(mockName) && _.isString(responseKey)) {
+      updateUserSetting(mockName, responseKey, config)
       res.send('{"code": 1}')
     } else {
       res.send('{"code": 0, "errInfo": "param error"}')
@@ -105,7 +99,8 @@ function initAdmin (app, config) {
       mock.responseOptionsList = []
       for (var key in mock.responseOptions) {
         var option = mock.responseOptions[key]
-        option.name = key
+        option.key = key
+        option.template = fs.readFileSync(path.join(config.mockPath, option.path), 'utf8')
         mock.responseOptionsList.push(option)
       }
       if (setting[mockName]) {
@@ -143,8 +138,7 @@ function updateUserSetting (apiName, responseKey, config) {
 }
 
 function initStaticServer (app, config) {
-  app.use(express.static(config.rootPath))
-  app.get('/', express.static(config.rootPath))
+  app.use('/', express.static(config.rootPath))
 }
 
 function initAPI (app, config) {
@@ -159,7 +153,7 @@ function initAPI (app, config) {
 function main (config) {
   var app = express()
   app.use(logger('dev'))
-  //initStaticServer(app, config)
+  initStaticServer(app, config)
   initAdmin(app, config)
   initAPI(app, config)
   app.listen(config.port || 3000, '127.0.0.1')

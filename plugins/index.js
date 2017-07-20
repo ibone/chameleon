@@ -1,7 +1,7 @@
 var _ = require('lodash')
 var singleUpload = require('./upload')
 var customData = require('./custom')
-var allPlugin = {
+var allPlugins = {
   'singleUpload': singleUpload,
   'default': customData
 }
@@ -12,7 +12,7 @@ function mount (mock, req, mockData, callback) {
     plugins = [mock]
   }
   if (!_.isArray(plugins)) {
-    return callback(mockData)
+    plugins = []
   }
   plugins.unshift({
     name: 'default'
@@ -28,7 +28,8 @@ function mount (mock, req, mockData, callback) {
 
 function loadPlugin (plugins, mockData, env, callback) {
   var plugin = plugins.pop()
-  allPlugin[plugin.name](plugin.option, mockData, env, function (result) {
+  console.log('loadPlugin')
+  allPlugins[plugin.name](plugin.option, mockData, env, function (result) {
     if (plugins.length > 0) {
       loadPlugin(plugins, result, env, callback)
     } else {
