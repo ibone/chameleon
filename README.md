@@ -1,6 +1,7 @@
 [![NPM version][npm-image]][npm-url]
 # Chameleon Mock
-离线本地接口模拟
+本项目已迁移到 [ejs-mock]:https://github.com/dwfeiFE/ejs-mock
+the project move to [ejs-mock]:https://github.com/dwfeiFE/ejs-mock
 
 [npm-url]: https://www.npmjs.com/package/getman
 [npm-image]: https://img.shields.io/npm/v/getman.svg
