@@ -4,42 +4,37 @@
 <meta charset="utf-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 <title>example</title>
-<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="./css/pretty.css">
+<link rel="stylesheet" href="./css/index.css">
 <body>
-  <div class="">
-    <div class="tit">接口1:列表</div>
-    <div class="src">http://localhost:8080/list</div>
-    <div class="tit">数据模版</div>
-    <div class="data">数据模版</div>
-    <div class="btn">请求</div>
-  </div>
-  <div class="">
-    <div class="tit">接口2:详情</div>
-    <div class="src">http://localhost:8080/detail/2</div>
-    <div class="tit">数据模版</div>
-    <div class="mock"></div>
-    <div class="btn" click="get(1)">请求</div>
-    <div class="result"></div>
-  </div>
-  <div class="">
-    <div class="tit">接口3:更新</div>
-    <div class="src">http://localhost:8080/detail/2/update</div>
-    <div class="btn">请求</div>
-  </div>
-  <div class="">
-    <div class="tit">接口4:参数详情</div>
-    <div class="src">http://localhost:8080/detail/2/?</div>
-    <div class="btn">请求</div>
-  </div>
-  <div class="">
-    <div class="tit">接口4:参数详情</div>
-    <div class="src">http://localhost:8080/detail/2/?</div>
-    <div class="btn">请求</div>
-  </div>
-<script src="./js/jquery.js"></script>
-<script src="./js/json-formatter.js"></script>
-<script>
-
+<script type="text/template" id="template">
+  <% list.forEach(function (mock, i) { %>
+    <div class="section">
+      <div class="flex">
+        <div class="tit">接口：</div>
+        <div class="src">http://localhost:8080<%= mock.url %></div>
+      </div>
+      <div class="flex">
+        <div class="tit">数据模版：</div>
+        <% mock.responseOptionsList.forEach(function (option) { %>
+        <div class="temp">
+          <pre><%= option.template %></pre>
+          <div class="fetch-btn" data-mockname="<%=mock.name%>" data-key="<%=option.key%>" data-url="<%=mock.url%>" data-id="mock<%=i%>">请求数据</div>
+        </div>
+        <% })%>
+      </div>
+      <div class="flex">
+        <div class="tit">返回结果：</div>
+          <div class="data" id="mock<%=i%>"></div>
+      </div>
+    </div>
+  <% })%>
 </script>
+<script src="./js/jquery.js"></script>
+<script src="./js/underscore.js"></script>
+<script src="./js/backbone.js"></script>
+<script src="./js/pretty-json.js"></script>
+<script src="./js/ejs.js"></script>
+<script src="./js/index.js"></script>
 </body>
 </html>

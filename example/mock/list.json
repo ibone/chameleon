@@ -7,8 +7,12 @@
   "responseKey": "firstKey",
   "responseOptions": {
     "firstKey": {
-      "desc": "normal order",
+      "desc": "one item",
       "path": "./list/firstData.json"
+    },
+    "SecondKey": {
+      "desc": "ten items",
+      "path": "./list/secondData.json"
     }
   }
 }

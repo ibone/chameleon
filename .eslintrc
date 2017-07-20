@@ -6,6 +6,8 @@
   },
   "globals": {
     "$": true,
-    "Vue": true
+    "Vue": true,
+    "PrettyJSON": true,
+    "ejs": true
   }
 }

@@ -1,6 +1,6 @@
 {
   "data": [{
-    "content": "hello world"
+    "content": "hello <%= 'ejs' %>"
   }],
   "status": {
     "code": 200

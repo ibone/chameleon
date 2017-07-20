@@ -1,0 +1,14 @@
+{
+  "data": [
+<% _.times(9, String).forEach(function () {%>
+    {
+      "content": "hello world<%=number(8)%>"
+    },
+<% }) %>
+    {
+      "content": "hello world<%=number(8)%>"
+    }],
+  "status": {
+    "code": 200
+  }
+}
