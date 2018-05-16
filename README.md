@@ -1,8 +1,5 @@
 [![NPM version][npm-image]][npm-url]
 # Chameleon Mock
-- 本项目已迁移到 [ejs-mock](https://github.com/dwfeiFE/ejs-mock)
-- the project moved to [ejs-mock](https://github.com/dwfeiFE/ejs-mock)
-- changed npm package name: ejs-mock
 
 [npm-url]: https://www.npmjs.com/package/chameleon-mock
 [npm-image]: https://img.shields.io/npm/v/chameleon-mock.svg
